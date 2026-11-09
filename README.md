@@ -1,133 +1,122 @@
 # Traitors
 
-A self-hosted LAN party game for **10–14 players plus a separate host**. Offline mini-games, public scores, private decisions, and a projector controlled by the host. No internet connection is needed during play, and no slide editor or online mini-games are required.
+A social deduction party game for **10–14 players and a host**. Play mini-games together, then use your phones to make private decisions. **Innocents** try to banish every Traitor. **Traitors** try to survive the final vote. Mini-game points crown a separate champion, no matter which side wins.
 
-## Screenshots
+[Start locally](#start-locally) · [Follow a full game](#screenshots) · [Host guide](docs/HOST-GUIDE.md) · [Full rules](docs/RULES.md)
 
-![Traitors desktop home page](docs/screenshots/desktop-home.png)
-
-[Host round desk](docs/screenshots/desktop-host.png) · [Public projector](docs/screenshots/desktop-projector.png)
-
-<img src="docs/screenshots/mobile-join.png" width="245" alt="Player code entry in the mobile browser"> <img src="docs/screenshots/mobile-ballot.png" width="245" alt="Private banishment ballot in the mobile browser">
-
-The screenshots use fictional rehearsal players. Players join and vote in their phone’s browser. [See the complete game walkthrough](docs/SCREENSHOTS.md), from the join QR and mini-games through the final reveal and backup.
-
-**Implementation:** all four software phases are built. Automated rules/HTTP tests, a 14-player rehearsal, a real process restart, and import into a fresh database have passed. **A second physical computer, real phones, your Wi-Fi/firewall and your actual projector still need the device rehearsal in [docs/REHEARSAL.md](docs/REHEARSAL.md).** A second database on this laptop does not prove recovery from laptop hardware failure.
+![Traitors home page with links to join, open the projector, and enter host control](docs/screenshots/desktop-home.png)
 
 ## Start locally
 
-Install **Node.js 24 LTS** (the built-in SQLite API is required). No `npm install`, build step, external service, or additional runtime package is needed. The QR encoder is vendored with its MIT license.
-
-From the project directory in PowerShell:
+Install **Node.js 24 LTS** and run this from the project directory. No package install or build step is needed.
 
 ```powershell
 node server.js
 ```
 
-Alternatively:
+1. Open the [host desk](http://localhost:3000/host) on your laptop and sign in with the first-run password printed in the terminal.
+2. Open the [projector](http://localhost:3000/projector) on a separate display. Use an extended display so your private host desk stays off the big screen.
+3. Put every device on the same trusted Wi-Fi. From a phone, test the server's printed **LAN join** address before the game. A phone needs the laptop's Wi-Fi address, since `localhost` points to the phone itself.
 
-```powershell
-./scripts/start.ps1 -Port 3000 -DataDirectory './data'
-```
+The game runs over your local network and can play offline. For firewall setup, custom ports, and recovery, see the [host guide](docs/HOST-GUIDE.md) and [LAN troubleshooting](docs/NETWORK-TROUBLESHOOTING.md).
 
-The terminal prints:
+## Screenshots
 
-- Local: `http://localhost:3000`
-- Host: `http://localhost:3000/host`
-- Projector: `http://localhost:3000/projector`
-- LAN join: your laptop’s Wi-Fi address, such as `http://192.168.1.42:3000/join`
-- **First-run host password. Save it privately.** It is generated once and stored as a salted scrypt hash; restarting preserves it. The `HOST_PASSWORD` environment variable sets a password on a new database only (12–256 characters recommended; at least 12 required).
+This walkthrough follows a three-round demo with 14 fictional players. It shows what the **host**, the **room**, and an individual **player** see at each stage. Click any screenshot to open it at full size.
 
-Open `/host` on the host’s private screen and `/projector` on the extended projector display. Use **extend displays**, not mirror. Register the players in **Players & roles**, give each their six-digit code privately, and show the common join QR. All phones use `/join`. Optional portrait uploads are resized on the phone, with initials as fallback.
+[Joining](#1-gather-the-players) · [Mini-games](#2-play-a-mini-game-and-enter-scores) · [Voting](#4-predict-discuss-and-vote) · [Finale](#7-play-the-finale) · [Recovery](#8-save-and-recover-a-game)
 
-Start the gathering. If no roles were manually assigned, the server chooses the configured number of Traitors using the game’s saved random seed. Inspect the private roster and distribute folded role cards to **everyone** before opening private decisions; tell the Traitors who one another are. No phone ever shows a role, including its own.
+### 1. Gather the players
 
-The host desk guides each phase; nothing is revealed by an automatic timer. The timer is a room aid, not a forced transition. **Add 14 rehearsal profiles** is for an empty test lobby. Export a backup, then use **start a fresh game** in the round desk when ready to clear a rehearsal roster. A running game must be paused before this action; history remains in the local audit.
+Register guests in **Players & roles** and hand each person their six-digit code privately. Everyone scans the same join QR on the projector and enters their own code in their phone's browser. Players can upload a portrait or use their initials.
 
-## Join over Wi-Fi
+When the room is ready, start the game. By default there are two Traitors and everyone else is an Innocent. Hand out folded role cards to everyone and privately tell the Traitors who their teammates are. Every player gets the same phone interface.
 
-1. Connect the laptop, host device and every phone to the same trusted Wi-Fi/LAN. Avoid guest Wi-Fi with client/AP isolation enabled; it prevents devices from reaching the laptop. Internet access can be unavailable once Node is installed and the project is copied.
-2. Keep the laptop on AC power, disable sleep for the party, and disconnect VPNs that interfere with LAN traffic. Prefer a DHCP reservation so the laptop address stays stable.
-3. Allow Node.js through Windows Firewall on the **Private** network profile. The server listens on `0.0.0.0:3000`. Do not configure router port forwarding or expose it to the internet. If the port changes, use the new port everywhere.
-4. Test the printed **LAN join** address from one actual phone. `localhost` on a phone refers to that phone, not the host laptop. If multiple adapters/VPNs are present, set the exact URL explicitly before starting:
+![Public lobby showing the join QR and the 14-player roster](docs/screenshots/projector-lobby.png)
 
-```powershell
-$env:JOIN_URL = 'http://192.168.1.42:3000/join' # replace with the laptop's actual address
-node server.js
-```
+<p align="center"><a href="docs/screenshots/mobile-join.png"><img src="docs/screenshots/mobile-join.png" width="250" alt="Mobile join screen prompting for the player's six-digit code"></a></p>
 
-The QR is generated locally and contains only this common URL. It never contains a player’s code. Default address detection prefers a private IPv4 LAN address, but the host must verify the QR from an actual phone.
+*The QR in this demo uses an example address. For a real game, use the join link printed by your server.*
 
-5. If blocked, check `ipconfig`, the Wi-Fi address, firewall permissions, guest isolation and the port. For a managed network, ask its administrator to allow inbound TCP 3000 from the party LAN. Setting `BIND_ADDRESS=127.0.0.1` intentionally makes a server local-only.
+### 2. Play a mini-game and enter scores
 
-For LAN diagnostics, the scoped firewall helper and rollback instructions, see [docs/NETWORK-TROUBLESHOOTING.md](docs/NETWORK-TROUBLESHOOTING.md). VPN local-device isolation can also block access even when Windows has an allow rule.
+Play whatever works for your group: a movie quiz, music guesses, cards, or a tabletop game. In this round, the host opens a PDF clue in **Presentation** and shows it on the projector. The answer stays in the host's hidden answer field until the host reveals it.
 
-LAN HTTP is unencrypted: use a trusted party network. Browser `getUserMedia()` camera access can be restricted on HTTP LAN origins. This app uses normal **photo file upload**, which works without camera API permission; a phone’s file chooser may offer camera capture. Use a trusted HTTPS reverse proxy/certificate if required by your network, and set `COOKIE_SECURE=1` only when serving through HTTPS. No self-signed warning bypass is needed for the default upload workflow.
+| Host · presentation controls | Projector · movie clue |
+| :--- | :--- |
+| <a href="docs/screenshots/host-presentation.png"><img src="docs/screenshots/host-presentation.png" width="420" alt="The host has a PDF loaded and controls when its answer is revealed"></a> | <a href="docs/screenshots/projector-movie-clue.png"><img src="docs/screenshots/projector-movie-clue.png" width="420" alt="The room sees a movie guessing clue rendered from the uploaded PDF"></a> |
 
-## Rules and operation
+In **Scores & teams**, add points to individuals or groups as you play, or set final round totals afterward. The projector can show the round and overall leaderboards side by side.
 
-Read [docs/RULES.md](docs/RULES.md) before the party. Default decisions are explicit: **one public Shield**, unranked murder penalty **6**, seeded aggregate ties for any Traitor count, one restricted banishment revote then a recorded host tie-break, and paper Shield gifts through the host. Shield count/visibility, initial Traitors and Finale threshold are configurable. These are implementation defaults proposed in response to the brief’s open questions; they can be changed before your party.
+| Host · score entry | Projector · standings |
+| :--- | :--- |
+| <a href="docs/screenshots/host-scores.png"><img src="docs/screenshots/host-scores.png" width="420" alt="Score table with round totals and quick award buttons"></a> | <a href="docs/screenshots/projector-leaderboards.png"><img src="docs/screenshots/projector-leaderboards.png" width="420" alt="Round and overall standings for all 14 demo players"></a> |
 
-- Mini-games and group sizes are free-form. Scores can be edited live or entered as final totals later. **Set** replaces round totals; quick/bulk awards add once. Overall totals are calculated. Murdered Innocents keep playing for points.
-- Normal Recruitment is once per game following a Traitor banishment with a survivor, outside the Finale. Administrative replacement for a departed Traitor is a separate audited operation and does not consume it.
-- Phone disconnection never eliminates anyone. **Review player** can note a temporary disconnect, start a departure/retirement review, or restore status. The game pauses for review. Retain submitted decisions or restart an open, unrevealed ballot; review roles/Shields, then resume.
-- To replace a departed Traitor, resolve departure first and keep the game paused. In **Review player** on that departed Traitor, choose an active Innocent as the administrative replacement. Reset/finish an open ballot first if it has submissions.
-- Host role edits require confirmation, a reason, and a paused game after the lobby. Shields can be corrected before predictions or, with a reason, while paused before the round’s murder announcement. Past finished rounds do not silently change.
-- The last reversible action can be corrected in **Recovery & audit**. Undo appends an event and invalidates phone sessions. It cannot unpublish votes, role reveals, murders or final results. Restoring an older snapshot is an explicit host recovery action; it cannot make players forget a public reveal.
+### 3. Award the Shield
 
-## Presentations
+By default, the highest eligible scorer earns one **Shield**. It protects its holder from murder for the current round. The holder can still be banished by the table. A previously murdered Innocent who wins a Shield can gift it to an active player through the host.
 
-In **Presentation**, upload PNG/JPEG/WebP files or a PDF exported from PowerPoint. Use next/previous file, PDF page number, show/hide, a hidden answer field, and reveal answer. Open the projector and use its fullscreen button (or the browser’s fullscreen command).
+![Host chooses the scoring winner and the Shield recipient before opening predictions](docs/screenshots/host-shield.png)
 
-All uploaded slide files and every PDF page are public, even when a different file is displayed. Keep secret answers out of source PDFs; put them in the host’s hidden answer field instead. Changing file/page hides the answer overlay; enter the next clue’s answer before revealing it. Vote reveals and elimination announcements take display priority. A locally bundled PDF.js canvas viewer renders PDF pages without a browser PDF plugin. Rehearse your actual files and keep a separate PPT/PDF window as fallback. Image slides also work offline.
+### 4. Predict, discuss, and vote
 
-Files: 3 MB per photo, 15 MB per presentation file, 32 MB total stored media. Replaced/old media are retained locally for audit/undo and count toward that limit; use compressed assets and a fresh `DATA_DIR` for a new party when appropriate.
+Every active player can rank up to five other players on the same **murder prediction** ballot. Only the rankings from Traitors still active after banishment determine the murder. The host closes predictions and starts the **Ring of Doubt**, where players discuss whom they suspect.
 
-## Backup and hardware failure recovery
+| Phone · rank predictions | Phone · discussion |
+| :--- | :--- |
+| <a href="docs/screenshots/mobile-predictions.png"><img src="docs/screenshots/mobile-predictions.png" width="235" alt="Player ranks two candidates on the private prediction ballot"></a> | <a href="docs/screenshots/mobile-discussion.png"><img src="docs/screenshots/mobile-discussion.png" width="235" alt="Ring of Doubt screen with the discussion timer"></a> |
 
-Download a restore snapshot from **Recovery & audit** after setup and after every round. It contains current game state, identities and codes, scores, ballots, portraits, presentation files and full audit metadata, with a SHA-256 corruption checksum. Password hashes and sessions are excluded. It is **private**, not encrypted; store it securely. The checksum detects accidental corruption, not malicious editing by a person who can rewrite the file.
+After discussion, each active player votes for one other player to **banish**. Submitting locks the decision and shows a confirmation on the phone.
 
-**Copy the snapshot off this laptop** to a USB drive, second device or private network share. A backup only under `data/` or Downloads on the same laptop does not cover hardware loss. Export can also go directly to an attached backup destination:
+| Phone · banishment vote | Phone · vote locked |
+| :--- | :--- |
+| <a href="docs/screenshots/mobile-ballot.png"><img src="docs/screenshots/mobile-ballot.png" width="235" alt="Player chooses one person on the private banishment ballot"></a> | <a href="docs/screenshots/mobile-vote-sealed.png"><img src="docs/screenshots/mobile-vote-sealed.png" width="235" alt="Decision sealed confirmation on the player phone"></a> |
 
-```powershell
-node scripts/backup.js --data './data' --out 'E:\TraitorsBackup\party.backup.json'
-# Or a private network share:
-node scripts/backup.js --data './data' --out '\\SECOND-LAPTOP\PartyBackup\party.backup.json'
-```
+### 5. Reveal votes and announce eliminations
 
-Use your actual drive/share. The exporter reads a consistent SQLite transaction and writes a temporary file then renames it; the server may keep running. Verify the file really exists on the second device. Do not copy only `party.sqlite` while it is running: committed data may still be in its WAL file.
+The **Round desk** shows which players have submitted. The projector's gallery shows portraits, public Shields, and scores while the room waits.
 
-On a **second physical computer**:
+| Host · ballot progress | Projector · portrait gallery |
+| :--- | :--- |
+| <a href="docs/screenshots/desktop-host.png"><img src="docs/screenshots/desktop-host.png" width="420" alt="Private round desk tracking eight of fourteen submitted decisions"></a> | <a href="docs/screenshots/desktop-projector.png"><img src="docs/screenshots/desktop-projector.png" width="420" alt="Public player gallery with scores and a Shield marker"></a> |
 
-1. Install Node.js 24, copy this application folder (no `data/` needed), and attach/open the off-device snapshot.
-2. Run `node server.js`. Save the newly generated host password and open `/host`.
-3. In **Recovery & audit**, select the snapshot, enter a reason, confirm replacement, and restore. Invalid checksums or malformed state are rejected before writing. Destination audit history is retained; source history is archived inside the restore event.
-4. Review the restored game, which starts **paused**. Check roles, status, points, current ballot and media. Previously logged-in phones must rejoin; codes map to the same permanent IDs and never revive eliminated players.
-5. Update `JOIN_URL` to the second computer’s LAN address if needed. Share that new common URL/QR, rejoin the phones, then resume. Pause freezes the timer; the import preserves its remaining time at export.
+After closing the ballot, reveal **every vote**, one at a time, and let each voter explain their reasoning. The player with the most votes is banished and their role is revealed. If the vote ties, hold a restricted revote; a second tie goes to a host-recorded tie-break.
 
-For a normal restart on the same computer, run the same start command with the same `DATA_DIR`. State, current reveal position, votes and valid sessions survive; a running timer uses its saved absolute deadline. An actual abrupt process termination/restart has been rehearsed. Source undo checkpoints remain local to the database; portable backups preserve current state and full audit metadata, rather than all historical undo images.
+![Six of fourteen banishment votes have been revealed on the projector](docs/screenshots/projector-vote-reveal.png)
 
-Run only one game server per `DATA_DIR`. Separate test/production directories are supported. Keep all `data/`, backups and `test-output/` private and out of source control.
+The host then reviews the murder result privately and announces it to the room. In this demo, Casey is banished and revealed as an Innocent. Drew is murdered but can still join offline mini-games and earn points. Drew's phone shows their status and stops offering ballots.
 
-If you forget the host password and have local filesystem access, stop the server and run:
+| Projector · banishment | Projector · murder |
+| :--- | :--- |
+| <a href="docs/screenshots/projector-banishment.png"><img src="docs/screenshots/projector-banishment.png" width="420" alt="Casey is banished and revealed as an Innocent"></a> | <a href="docs/screenshots/projector-murder.png"><img src="docs/screenshots/projector-murder.png" width="420" alt="Drew is announced as murdered and can still play for points"></a> |
 
-```powershell
-$env:NEW_HOST_PASSWORD = 'choose-a-new-private-password'
-node scripts/reset-password.js
-Remove-Item Env:NEW_HOST_PASSWORD
-node server.js
-```
+<p align="center"><a href="docs/screenshots/mobile-eliminated.png"><img src="docs/screenshots/mobile-eliminated.png" width="250" alt="Drew's mobile screen explains how to keep playing mini-games after murder"></a></p>
 
-This audits the recovery and revokes host sessions. Set `DATA_DIR` first if using a non-default folder. Avoid putting a real password in shared shell history.
+### 6. Take an interlude and start the next round
 
-## Verification and project layout
+Repeat the mini-game, scoring, Shield, and voting sequence. If a Traitor is banished and another Traitor survives, the survivor can **recruit one active Innocent once per game** before the Finale. The host handles the decision privately and gives everyone the same folded-card interaction.
 
-```powershell
-node scripts/check.js
-node --test --test-concurrency=1 tests/*.test.js
-node scripts/rehearsal.js
-```
+![Private host recruitment form during a later round's interlude](docs/screenshots/host-recruitment.png)
 
-The rehearsal launches two real server processes with isolated source/destination directories, simulates 14 player sessions, terminates/restarts a process, transfers a snapshot, restores into a fresh database, then finishes the Finale. It writes a report and private fixtures/backups to `test-output/rehearsal/<timestamp>/`. It does not claim those two processes are two physical computers. See [docs/VERIFICATION.md](docs/VERIFICATION.md) for results and [docs/REHEARSAL.md](docs/REHEARSAL.md) for the remaining physical-device sign-off.
+### 7. Play the Finale
 
-`server.js` owns HTTP/authentication and media; `lib/game.js` owns rules and allowlisted public/phone views; `lib/store.js` owns SQLite transactions, audit and sessions; `lib/backup.js` validates portable snapshots; `public/` holds the three browser interfaces. [docs/SPEC.md](docs/SPEC.md) describes the game requirements. [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) records the architecture and implementation phases. [THIRD_PARTY.md](THIRD_PARTY.md) records licensing.
+When the table reaches the configured number of active players, murders and recruitment stop. The default is four; this demo uses eight. Each remaining player chooses **TRUST** or **TRAITOR** in private. Unanimous TRUST ends the game. A TRAITOR choice sends the table into another banishment, then another trust decision. The game also ends if only two players remain or the last Traitor is banished.
+
+<p align="center"><a href="docs/screenshots/mobile-finale.png"><img src="docs/screenshots/mobile-finale.png" width="250" alt="Mobile Finale ballot with TRUST and TRAITOR choices"></a></p>
+
+The Innocents win if no Traitor remains. In this demo a Traitor survives the final vote, so the **Traitors win**. The projector separately names Kai the **mini-game champion** with 114 points.
+
+![Final reveal showing the Traitors' victory, Kai's 114 points, and the remaining players' roles](docs/screenshots/projector-finale.png)
+
+### 8. Save and recover a game
+
+The host can use **Recovery & audit** to export a private restore snapshot, restore a game, or review host actions. Copy a snapshot to a second device after setup and after each round so you can recover if the host laptop fails.
+
+![Host screen showing snapshot download, restore, and audit controls](docs/screenshots/host-recovery.png)
+
+## Documentation
+
+- [Host guide](docs/HOST-GUIDE.md) — setup, Wi-Fi, presentation controls, backups, and recovery.
+- [Full game rules](docs/RULES.md) — ranking, Shields, ties, departures, and the Finale.
+- [Device rehearsal checklist](docs/REHEARSAL.md) — test phones, projector, and an off-device restore before the event.
+- [Verification](docs/VERIFICATION.md) and [implementation](docs/IMPLEMENTATION.md) — automated tests, the 14-player rehearsal, and project structure.
