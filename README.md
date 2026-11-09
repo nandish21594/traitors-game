@@ -10,7 +10,7 @@ A self-hosted LAN party game for **10–14 players plus a separate host**. Offli
 
 <img src="docs/screenshots/mobile-join.png" width="245" alt="Player code entry in the mobile browser"> <img src="docs/screenshots/mobile-ballot.png" width="245" alt="Private banishment ballot in the mobile browser">
 
-The screenshots use fictional rehearsal players. Players join and vote in their phone’s browser.
+The screenshots use fictional rehearsal players. Players join and vote in their phone’s browser. [See the complete game walkthrough](docs/SCREENSHOTS.md), from the join QR and mini-games through the final reveal and backup.
 
 **Implementation:** all four software phases are built. Automated rules/HTTP tests, a 14-player rehearsal, a real process restart, and import into a fresh database have passed. **A second physical computer, real phones, your Wi-Fi/firewall and your actual projector still need the device rehearsal in [docs/REHEARSAL.md](docs/REHEARSAL.md).** A second database on this laptop does not prove recovery from laptop hardware failure.
 
