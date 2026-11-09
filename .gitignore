@@ -1,0 +1,8 @@
+data/
+test-output/
+node_modules/
+*.sqlite*
+*.backup.json
+.env
+.env.*
+/diwali_traitors_codex_spec.md
